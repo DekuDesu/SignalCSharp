@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 namespace DingoAuthentication.Encryption
 {
+    // this removes the warning for Windows Operating System dependancy, the DH crypto function will eventually be re-written, but for now this warning is clogging up my warnings
+#pragma warning disable CA1416
     public class DiffieHellmanHandler : IDiffieHellmanHandler
     {
         private readonly ILogger<DiffieHellmanHandler> logger;
@@ -77,6 +79,41 @@ namespace DingoAuthentication.Encryption
                 catch (CryptographicException e)
                 {
                     logger?.LogError("Failed to create shared secret for key pair {Error}", e);
+                    return false;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
+
+        public bool TryDeriveKey<T>(byte[] PrivateKey, byte[] KeyToDeriveFrom, out byte[] DerivedPrivateKey, ILogger<T> logger)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    using (ECDiffieHellmanCng ECD = new ECDiffieHellmanCng(KeySize))
+                    {
+
+                        ECD.KeyDerivationFunction = ECDHKDF;
+                        ECD.HashAlgorithm = HashingAlgorithm;
+
+                        ECD.ImportECPrivateKey(PrivateKey, out _);
+
+                        CngKey bobsKey = CngKey.Import(KeyToDeriveFrom, KeyBlobFormat);
+
+                        DerivedPrivateKey = ECD.DeriveKeyMaterial(bobsKey);
+                    }
+                    return true;
+                }
+                catch (CryptographicException e)
+                {
+                    logger?.LogError("Failed to create shared secret for key pair {Error}", e);
+
+                    DerivedPrivateKey = default;
+
                     return false;
                 }
             }

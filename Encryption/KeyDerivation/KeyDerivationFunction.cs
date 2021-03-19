@@ -11,7 +11,7 @@ namespace DingoAuthentication.Encryption
     {
         public byte[] Salt { get; set; } = { 168, 244, 151, 155, 119, 227, 249, 63 };
 
-        public HashAlgorithmName HashAlgorithm { get; set; }
+        public HashAlgorithmName HashAlgorithm { get; set; } = HashAlgorithmName.SHA256;
 
         public int KeySize { get; set; } = 256;
 
