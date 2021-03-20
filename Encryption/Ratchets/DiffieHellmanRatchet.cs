@@ -69,9 +69,24 @@ namespace DingoAuthentication.Encryption
             return false;
         }
 
+        public bool TryConvertPrivateKey(byte[] PrivateKey, out byte[] PublicKey)
+        {
+            return dHH.TryGetPublicKey(PrivateKey, out PublicKey, logger);
+        }
+
         private bool TrySignPublicKey()
         {
             return signer.TrySign(publicKey, x509IdentityPrivateKey, out identitySignature, out x509IdentityKey);
+        }
+
+        public bool TrySignKey(byte[] KeyToSign, out byte[] Signature)
+        {
+            return signer.TrySign(KeyToSign, x509IdentityPrivateKey, out Signature, out x509IdentityKey);
+        }
+
+        public bool TryVerifyKey(byte[] KeyToVerify, byte[] Signature, byte[] X509IdentityKey)
+        {
+            return signer.Verify(KeyToVerify, Signature, X509IdentityKey);
         }
 
         private void SignPublicKey()

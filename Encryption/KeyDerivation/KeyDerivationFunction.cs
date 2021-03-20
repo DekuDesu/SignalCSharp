@@ -13,15 +13,16 @@ namespace DingoAuthentication.Encryption
 
         public HashAlgorithmName HashAlgorithm { get; set; } = HashAlgorithmName.SHA256;
 
+        /// <summary>
+        /// The key size that should be generated in bits
+        /// </summary>
         public int KeySize { get; set; } = 256;
 
         public byte[] DeriveKey(byte[] KeyToDeriveFrom)
         {
-            byte[] key = HKDF.DeriveKey(HashAlgorithm, KeyToDeriveFrom, 256, Salt);
+            byte[] key = HKDF.DeriveKey(HashAlgorithm, KeyToDeriveFrom, KeySize >> 3, Salt);
 
-            byte[] extract = HKDF.Extract(HashAlgorithm, key, Salt);
-
-            return extract;
+            return key;
         }
     }
 }

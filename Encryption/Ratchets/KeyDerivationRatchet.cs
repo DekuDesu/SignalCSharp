@@ -34,7 +34,7 @@ namespace DingoAuthentication.Encryption
             CurrentLink = 0;
         }
 
-        private bool GenerateNextKey(out byte[] GeneratedKey)
+        public bool GenerateNextKey(out byte[] GeneratedKey)
         {
             if (ParentKey?.Length is null or 0)
             {
@@ -69,6 +69,8 @@ namespace DingoAuthentication.Encryption
                 return false;
             }
 
+            // since this is a sender the keys used should be private keys, private keys are 32 bytes
+            kdf.KeySize = 256;
             SenderRatchet = true;
 
             // if we were successful in ratcheting one link
@@ -128,7 +130,19 @@ namespace DingoAuthentication.Encryption
             else if (GenerateNextKey(out ParentKey))
             {
                 // if we are neither behind or ahead of our expected ratchet position, ratchet once and decrypt
-                return symmetricHandler.TryDecrypt(DataToDecrypt, ParentKey, out DecryptedString);
+                // make sure we store the key if for some reason encryption failed
+                if (symmetricHandler.TryDecrypt(DataToDecrypt, ParentKey, out DecryptedString))
+                {
+                    return true;
+                }
+                else
+                {
+                    // store the key to avoid Key Depletion Attacks
+                    // this is to prevent an attacker from continuously requesting client decryption
+                    StoredKeys.Add((CurrentLink, ParentKey));
+
+                    return false;
+                }
             }
             else
             {

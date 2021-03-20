@@ -123,5 +123,37 @@ namespace DingoAuthentication.Encryption
             }
         }
 
+        public bool TryGetPublicKey<T>(byte[] PrivateKey, out byte[] PublicKey, ILogger<T> logger)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    using (ECDiffieHellmanCng ECD = new ECDiffieHellmanCng(KeySize))
+                    {
+
+                        ECD.KeyDerivationFunction = ECDHKDF;
+                        ECD.HashAlgorithm = HashingAlgorithm;
+
+                        ECD.ImportECPrivateKey(PrivateKey, out _);
+
+                        PublicKey = ECD.PublicKey.ToByteArray();
+                    }
+                    return true;
+                }
+                catch (CryptographicException e)
+                {
+                    logger?.LogError("Failed to get public key with private key {Error}", e);
+
+                    PublicKey = default;
+
+                    return false;
+                }
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
     }
 }

@@ -23,5 +23,6 @@ namespace DingoAuthentication.Encryption
         (byte[] PublicKey, byte[] PrivateKey) GenerateKeys();
         bool TryCreateSharedSecret<T>(ref byte[] PublicKey, ref byte[] PrivateKey, byte[] KeyToDeriveFrom, ILogger<T> logger);
         bool TryDeriveKey<T>(byte[] PrivateKey, byte[] KeyToDeriveFrom, out byte[] DerivedPrivateKey, ILogger<T> logger);
+        bool TryGetPublicKey<T>(byte[] PrivateKey, out byte[] PublicKey, ILogger<T> logger);
     }
 }
