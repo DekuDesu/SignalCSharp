@@ -13,6 +13,7 @@ namespace DingoAuthentication.Encryption
         private readonly ILogger<KeyDerivationRatchet<T>> logger;
         private readonly IKeyDerivationFunction kdf;
         private readonly ISymmetricHandler<T> symmetricHandler;
+
         public byte[] ParentKey;
 
         public int CurrentLink = 0;
@@ -26,6 +27,35 @@ namespace DingoAuthentication.Encryption
             logger = _logger;
             kdf = _KDF;
             symmetricHandler = _symmetricHandler;
+        }
+
+        public void ImportState(string KeyDerivationRatchetState)
+        {
+            KeyDerivationState state = Newtonsoft.Json.JsonConvert.DeserializeObject<KeyDerivationState>(KeyDerivationRatchetState);
+
+            this.ParentKey = state.ParentKey;
+            this.CurrentLink = state.CurrentLink;
+            this.StoredKeys = state.StoredKeys;
+            this.SenderRatchet = state.SenderRatchet;
+        }
+
+        public string ExportState()
+        {
+            return Newtonsoft.Json.JsonConvert.SerializeObject(new KeyDerivationState()
+            {
+                ParentKey = this.ParentKey,
+                CurrentLink = this.CurrentLink,
+                StoredKeys = this.StoredKeys,
+                SenderRatchet = this.SenderRatchet
+            });
+        }
+
+        private class KeyDerivationState
+        {
+            public byte[] ParentKey { get; set; }
+            public int CurrentLink { get; set; }
+            public bool? SenderRatchet { get; set; }
+            public List<(int Link, byte[] Key)> StoredKeys { get; set; }
         }
 
         public void Reset(byte[] NewParentKey)
@@ -77,7 +107,14 @@ namespace DingoAuthentication.Encryption
             if (GenerateNextKey(out ParentKey))
             {
                 // try to encrypt the data
-                return symmetricHandler.TryEncrypt(DataToEncrypt, ParentKey, out EncryptedData);
+                bool pass = symmetricHandler.TryEncrypt(DataToEncrypt, ParentKey, out EncryptedData);
+
+                if (pass)
+                {
+                    EncryptedData.RatchetLink = CurrentLink;
+                }
+
+                return pass;
             }
             else
             {
@@ -152,5 +189,6 @@ namespace DingoAuthentication.Encryption
                 return false;
             }
         }
+
     }
 }

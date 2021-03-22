@@ -23,7 +23,11 @@
         /// <summary>
         /// The X509IdentityKey of this object, this does not change and can be used to verify the authenticity of the key of this object
         /// </summary>
-        byte[] X509IndentityKey { get; }
+        byte[] X509IdentityKey { get; }
+
+        void ImportState(string DiffieHellmanRatchetState);
+
+        string ExportState();
 
         /// <summary>
         /// Generates the starting keys for this object. This function will reset the state of this object to the very beginning and a new secret must be created weith the other party.
@@ -70,5 +74,13 @@
         /// <param name="Signature"></param>
         /// <returns></returns>
         bool TrySignKey(byte[] KeyToSign, out byte[] Signature);
+
+        /// <summary>
+        /// Attempts to sign the key using  the provided private key
+        /// </summary>
+        /// <param name="KeyToSign"></param>
+        /// <param name="Signature"></param>
+        /// <returns></returns>
+        bool TrySignKey(byte[] KeyToSign, byte[] PrivateKey, out byte[] Signature);
     }
 }

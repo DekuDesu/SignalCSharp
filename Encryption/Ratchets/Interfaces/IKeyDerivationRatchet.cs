@@ -6,6 +6,9 @@
     /// <typeparam name="T"></typeparam>
     public interface IKeyDerivationRatchet<T> where T : IEncryptedDataModel, new()
     {
+        void ImportState(string KeyDerivationRatchetState);
+        string ExportState();
+
         /// <summary>
         /// Resets the state of this object and re-seeds the private key using the provided key to make further derivations from.
         /// </summary>

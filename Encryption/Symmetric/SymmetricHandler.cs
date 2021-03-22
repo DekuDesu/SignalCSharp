@@ -87,7 +87,7 @@ namespace DingoAuthentication.Encryption
             return true;
         }
 
-        public bool TryDecrypt(T EncryptedData, byte[] Key, out string DecryptedString)
+        public bool TryDecrypt(IEncryptedDataModel EncryptedData, byte[] Key, out string DecryptedString)
         {
             // Ensure we don't throw unexpected errors
             if (EncryptedData is null)

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace DingoAuthentication.Encryption
 {
 
-    public class EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType>
+    public class EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType> : IEncryptionClient<EncryptedDataModelType>
         where EncryptedDataModelType : IEncryptedDataModel, new()
         where KeyBundleModelType : IKeyBundleModel, new()
         where SignedKeyModelType : ISignedKeyModel, new()
@@ -21,24 +21,17 @@ namespace DingoAuthentication.Encryption
         /// <summary>
         /// Generates keys that seed the key derivation functions
         /// </summary>
-        internal readonly IDiffieHellmanRatchet dhRatchet;
+        internal IDiffieHellmanRatchet dhRatchet;
 
         /// <summary>
         /// Generates keys that encrypt outgoin messages
         /// </summary>
-        internal readonly IKeyDerivationRatchet<EncryptedDataModelType> senderKDF;
+        internal IKeyDerivationRatchet<EncryptedDataModelType> senderKDF;
 
         /// <summary>
         /// Generates keys that decrypt incoming messages
         /// </summary>
-        internal readonly IKeyDerivationRatchet<EncryptedDataModelType> receiverKDF;
-
-        public int MaxPreKeys { get; set; } = 3;
-
-        /// <summary>
-        /// The keys that were generated when the last bundle was created
-        /// </summary>
-        internal List<ISignedKeyModel> GeneratedPreKeys { get; set; } = new();
+        internal IKeyDerivationRatchet<EncryptedDataModelType> receiverKDF;
 
         public EncryptionClient(
             ILogger<EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType>> _logger,
@@ -53,6 +46,30 @@ namespace DingoAuthentication.Encryption
             receiverKDF = _receiverKDF;
         }
 
+        public string ExportState()
+        {
+            string[] state = new string[3];
+
+            state[0] = dhRatchet.ExportState();
+
+            state[1] = senderKDF.ExportState();
+
+            state[2] = receiverKDF.ExportState();
+
+            return Newtonsoft.Json.JsonConvert.SerializeObject(state);
+        }
+
+        public void ImportState(string EncryptionClientState)
+        {
+            string[] state = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(EncryptionClientState);
+
+            dhRatchet.ImportState(state[0]);
+
+            senderKDF.ImportState(state[1]);
+
+            receiverKDF.ImportState(state[2]);
+        }
+
         public IKeyBundleModel GenerateBundle()
         {
             dhRatchet.GenerateBaseKeys();
@@ -65,7 +82,7 @@ namespace DingoAuthentication.Encryption
 
             return new KeyBundleModelType()
             {
-                X509IdentityKey = dhRatchet.X509IndentityKey,
+                X509IdentityKey = dhRatchet.X509IdentityKey,
                 PublicKey = PublicKey
             };
         }
@@ -81,11 +98,23 @@ namespace DingoAuthentication.Encryption
                 return false;
             }
 
-            return dhRatchet.TryCreateSharedSecret(
-                    OtherClientBundle.X509IdentityKey,
-                    OtherClientBundle.PublicKey.PublicKey,
-                    OtherClientBundle.PublicKey.Signature
-                );
+            if (dhRatchet.TryCreateSharedSecret
+                    (
+                        OtherClientBundle.X509IdentityKey,
+                        OtherClientBundle.PublicKey.PublicKey,
+                        OtherClientBundle.PublicKey.Signature
+                    )
+                )
+            {
+                // make sure to set the seed key for the ratchets or else we wont be able to send or receive any messages
+                senderKDF.Reset(dhRatchet.PrivateKey);
+
+                receiverKDF.Reset(dhRatchet.PrivateKey);
+
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -99,7 +128,17 @@ namespace DingoAuthentication.Encryption
         /// </returns>
         public bool TryEncrypt(string DataToEncrypt, out EncryptedDataModelType EncryptedData)
         {
-            return senderKDF.TryEncrypt(ref DataToEncrypt, out EncryptedData);
+            bool pass = senderKDF.TryEncrypt(ref DataToEncrypt, out EncryptedData);
+
+            if (pass)
+            {
+                if (dhRatchet.TrySignKey(EncryptedData.Data, out var Signature))
+                {
+                    EncryptedData.Signature = Signature;
+                }
+            }
+
+            return pass;
         }
 
         /// <summary>
@@ -131,5 +170,6 @@ namespace DingoAuthentication.Encryption
                 receiverKDF.Reset(NewPrivateKey);
             }
         }
+
     }
 }

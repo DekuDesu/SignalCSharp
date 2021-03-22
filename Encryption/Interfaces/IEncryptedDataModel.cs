@@ -18,6 +18,11 @@
         /// <summary>
         /// The ratchet link that was used to encrypt the data
         /// </summary>
-        int RatchetLink { get; init; }
+        int RatchetLink { get; set; }
+
+        /// <summary>
+        /// The signature of the encrypted data using the X509IdentityKey of the party who encrypted the data
+        /// </summary>
+        public byte[] Signature { get; set; }
     }
 }

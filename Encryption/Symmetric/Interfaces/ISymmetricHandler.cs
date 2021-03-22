@@ -26,7 +26,7 @@
         /// <see langword="false"/> when Decryption failed, errors were encountered, or the inputs were invalid
         /// </para>
         /// </returns>
-        bool TryDecrypt(T EncryptedData, byte[] Key, out string DecryptedString);
+        bool TryDecrypt(IEncryptedDataModel EncryptedData, byte[] Key, out string DecryptedString);
 
         /// <summary>
         /// Attempts to Encrypt the given <see cref="T"/> <paramref name="EncryptedData"/>. 

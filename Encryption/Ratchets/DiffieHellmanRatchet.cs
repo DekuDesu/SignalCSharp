@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,9 +17,9 @@ namespace DingoAuthentication.Encryption
         private readonly ISignatureHandler signer;
 
         // this should never be changed outside of constructor
-        private byte[] x509IdentityKey;
+        internal byte[] x509IdentityKey;
         // this should never be changed outside of constructor
-        private byte[] x509IdentityPrivateKey;
+        internal byte[] x509IdentityPrivateKey;
 
         private byte[] publicKey;
         private byte[] privateKey;
@@ -29,7 +30,7 @@ namespace DingoAuthentication.Encryption
 
         public byte[] PrivateKey => privateKey;
 
-        public byte[] X509IndentityKey => x509IdentityKey;
+        public byte[] X509IdentityKey => x509IdentityKey;
 
         public byte[] IdentitySignature => identitySignature;
 
@@ -49,6 +50,42 @@ namespace DingoAuthentication.Encryption
 
             // sign the identity key
             SignPublicKey();
+        }
+
+        public void ImportState(string DiffieHellmanRatchetState)
+        {
+            byte[][] state = Newtonsoft.Json.JsonConvert.DeserializeObject<byte[][]>(DiffieHellmanRatchetState);
+
+            if (state?.Length is null or not 4)
+            {
+                logger.LogError("Failed to import state for DiffieHellmanRatchet State Given {State}", DiffieHellmanRatchetState);
+                return;
+            }
+
+            this.x509IdentityKey = state[0];
+
+            this.x509IdentityPrivateKey = state[1];
+
+            this.publicKey = state[2];
+
+            this.privateKey = state[3];
+
+            SignPublicKey();
+        }
+
+        public string ExportState()
+        {
+            byte[][] data = new byte[4][];
+
+            data[0] = x509IdentityKey;
+
+            data[1] = x509IdentityPrivateKey;
+
+            data[2] = publicKey;
+
+            data[3] = privateKey;
+
+            return Newtonsoft.Json.JsonConvert.SerializeObject(data);
         }
 
         public void GenerateBaseKeys()
@@ -84,6 +121,12 @@ namespace DingoAuthentication.Encryption
             return signer.TrySign(KeyToSign, x509IdentityPrivateKey, out Signature, out x509IdentityKey);
         }
 
+        public bool TrySignKey(byte[] KeyToSign, byte[] PrivateKey, out byte[] Signature)
+        {
+            return signer.TrySign(KeyToSign, PrivateKey, out Signature, out _);
+        }
+
+
         public bool TryVerifyKey(byte[] KeyToVerify, byte[] Signature, byte[] X509IdentityKey)
         {
             return signer.Verify(KeyToVerify, Signature, X509IdentityKey);
@@ -112,5 +155,6 @@ namespace DingoAuthentication.Encryption
                 return false;
             }
         }
+
     }
 }
