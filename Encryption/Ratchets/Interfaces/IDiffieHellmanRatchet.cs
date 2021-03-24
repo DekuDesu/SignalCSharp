@@ -30,9 +30,9 @@
         string ExportState();
 
         /// <summary>
-        /// Generates the starting keys for this object. This function will reset the state of this object to the very beginning and a new secret must be created weith the other party.
+        /// Generates the starting keys for this object. This function will reset the state of this object to the very beginning and a new secret must be created weith the other party. Provide identity keys to override the randomly generated ones. Identity keys are solely used for signing of keys and data
         /// </summary>
-        void GenerateBaseKeys();
+        void GenerateBaseKeys(byte[] X509IdentityKey = null, byte[] X509IdentityPrivateKey = null);
 
         /// <summary>
         /// Attempts to extract the public key from a private key.

@@ -88,9 +88,20 @@ namespace DingoAuthentication.Encryption
             return Newtonsoft.Json.JsonConvert.SerializeObject(data);
         }
 
-        public void GenerateBaseKeys()
+        public void GenerateBaseKeys(byte[] X509IdentityKey = null, byte[] X509IdentityPrivateKey = null)
         {
             (publicKey, privateKey) = dHH.GenerateKeys();
+
+            // override the identity keys if they're given
+            if (X509IdentityKey != null)
+            {
+                x509IdentityKey = X509IdentityKey;
+            }
+
+            if (X509IdentityPrivateKey != null)
+            {
+                x509IdentityPrivateKey = X509IdentityPrivateKey;
+            }
 
             // since we regenerated our keys we should re-sign them
             SignPublicKey();
@@ -155,6 +166,5 @@ namespace DingoAuthentication.Encryption
                 return false;
             }
         }
-
     }
 }

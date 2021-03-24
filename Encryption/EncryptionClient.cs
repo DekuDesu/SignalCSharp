@@ -70,9 +70,9 @@ namespace DingoAuthentication.Encryption
             receiverKDF.ImportState(state[2]);
         }
 
-        public IKeyBundleModel GenerateBundle()
+        public IKeyBundleModel GenerateBundle(byte[] X509IdentityKey = null, byte[] X509PrivateIdentityKey = null)
         {
-            dhRatchet.GenerateBaseKeys();
+            dhRatchet.GenerateBaseKeys(X509IdentityKey, X509PrivateIdentityKey);
 
             SignedKeyModelType PublicKey = new()
             {
