@@ -9,7 +9,7 @@ namespace DingoAuthentication.Encryption
     /// <summary>
     /// Container for keys used for inital exhanges
     /// </summary>
-    public class KeyBundleModel : IKeyBundleModel
+    public class KeyBundleModel<T> : IKeyBundleModel<T> where T : ISignedKeyModel, new()
     {
         /// <summary>
         /// The identifying key that was used to sign all the keys in this object
@@ -19,6 +19,6 @@ namespace DingoAuthentication.Encryption
         /// <summary>
         /// The public key that should be used for initial Diffie Hellman Secret
         /// </summary>
-        public ISignedKeyModel PublicKey { get; init; }
+        public T PublicKey { get; init; }
     }
 }

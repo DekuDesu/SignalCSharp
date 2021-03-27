@@ -10,15 +10,5 @@ namespace DingoAuthentication.Encryption
     {
         public byte[] PublicKey { get; init; }
         public byte[] Signature { get; init; }
-
-        public SignedKeyModel(byte[] PublicKey, byte[] Signature)
-        {
-            this.PublicKey = PublicKey;
-            this.Signature = Signature;
-        }
-        public SignedKeyModel()
-        {
-
-        }
     }
 }

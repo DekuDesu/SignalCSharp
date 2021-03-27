@@ -11,12 +11,12 @@ using System.Threading.Tasks;
 namespace DingoAuthentication.Encryption
 {
 
-    public class EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType> : IEncryptionClient<EncryptedDataModelType>
-        where EncryptedDataModelType : IEncryptedDataModel, new()
-        where KeyBundleModelType : IKeyBundleModel, new()
-        where SignedKeyModelType : ISignedKeyModel, new()
+    public class EncryptionClient<TEncryptedDataModelType, TKeyBundleModelType, TSignedKeyModelType> : IEncryptionClient<TEncryptedDataModelType, TSignedKeyModelType>
+        where TEncryptedDataModelType : IEncryptedDataModel, new()
+        where TKeyBundleModelType : IKeyBundleModel<TSignedKeyModelType>, new()
+        where TSignedKeyModelType : ISignedKeyModel, new()
     {
-        internal readonly ILogger<EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType>> logger;
+        internal readonly ILogger<EncryptionClient<TEncryptedDataModelType, TKeyBundleModelType, TSignedKeyModelType>> logger;
 
         /// <summary>
         /// Generates keys that seed the key derivation functions
@@ -26,18 +26,23 @@ namespace DingoAuthentication.Encryption
         /// <summary>
         /// Generates keys that encrypt outgoin messages
         /// </summary>
-        internal IKeyDerivationRatchet<EncryptedDataModelType> senderKDF;
+        internal IKeyDerivationRatchet<TEncryptedDataModelType> senderKDF;
 
         /// <summary>
         /// Generates keys that decrypt incoming messages
         /// </summary>
-        internal IKeyDerivationRatchet<EncryptedDataModelType> receiverKDF;
+        internal IKeyDerivationRatchet<TEncryptedDataModelType> receiverKDF;
+
+        /// <summary>
+        /// Returns true when the Diffie Hellman Ratchet created a secret with another Dh ratchet.
+        /// </summary>
+        public bool CreatedSecret => dhRatchet?.PrivateKey?.Length == 32;
 
         public EncryptionClient(
-            ILogger<EncryptionClient<EncryptedDataModelType, KeyBundleModelType, SignedKeyModelType>> _logger,
+            ILogger<EncryptionClient<TEncryptedDataModelType, TKeyBundleModelType, TSignedKeyModelType>> _logger,
             IDiffieHellmanRatchet _dhRatchet,
-            IKeyDerivationRatchet<EncryptedDataModelType> _senderKDF,
-            IKeyDerivationRatchet<EncryptedDataModelType> _receiverKDF
+            IKeyDerivationRatchet<TEncryptedDataModelType> _senderKDF,
+            IKeyDerivationRatchet<TEncryptedDataModelType> _receiverKDF
             )
         {
             logger = _logger;
@@ -70,24 +75,24 @@ namespace DingoAuthentication.Encryption
             receiverKDF.ImportState(state[2]);
         }
 
-        public IKeyBundleModel GenerateBundle(byte[] X509IdentityKey = null, byte[] X509PrivateIdentityKey = null)
+        public IKeyBundleModel<TSignedKeyModelType> GenerateBundle(byte[] X509IdentityKey = null, byte[] X509PrivateIdentityKey = null)
         {
             dhRatchet.GenerateBaseKeys(X509IdentityKey, X509PrivateIdentityKey);
 
-            SignedKeyModelType PublicKey = new()
+            TSignedKeyModelType PublicKey = new()
             {
                 PublicKey = dhRatchet.PublicKey,
                 Signature = dhRatchet.IdentitySignature
             };
 
-            return new KeyBundleModelType()
+            return new TKeyBundleModelType()
             {
                 X509IdentityKey = dhRatchet.X509IdentityKey,
                 PublicKey = PublicKey
             };
         }
 
-        public bool CreateSecretUsingBundle(IKeyBundleModel OtherClientBundle)
+        public bool CreateSecretUsingBundle(IKeyBundleModel<TSignedKeyModelType> OtherClientBundle)
         {
             // we want to create a shared secret between us and another client so we can send messages back and fourth
             // make sure the bundle that we got contains ONLY keys from the identity key inside the bundle
@@ -126,7 +131,7 @@ namespace DingoAuthentication.Encryption
         /// <see langword="false"/> The encryption failed, or a cryptographic exception was encountered.
         /// </para>
         /// </returns>
-        public bool TryEncrypt(string DataToEncrypt, out EncryptedDataModelType EncryptedData)
+        public bool TryEncrypt(string DataToEncrypt, out TEncryptedDataModelType EncryptedData)
         {
             bool pass = senderKDF.TryEncrypt(ref DataToEncrypt, out EncryptedData);
 
@@ -152,7 +157,7 @@ namespace DingoAuthentication.Encryption
         /// <see langword="false"/> The decryption failed, or a cryptographic exception was encountered.
         /// </para>
         /// </returns>
-        public bool TryDecrypt(EncryptedDataModelType EncryptedData, out string DecryptedString)
+        public bool TryDecrypt(TEncryptedDataModelType EncryptedData, out string DecryptedString)
         {
             return receiverKDF.TryDecrypt(EncryptedData, out DecryptedString);
         }
